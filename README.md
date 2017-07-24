@@ -25,9 +25,9 @@ eplot file1 file2 file3
 
 There are several ways to create multiple plots on a single diagramm:
 
-    -m: Several input files: Just give the name of the files on the command line together with the -m option
-    -M: A single file, the data for the different curves are in different columns: give the name of the file on the command line or pipe the data through standard in, and set the -M option
-    -S: A single file, the data for the different curves are in the same column, but the curves are separated by blank lines: give the name of the file on the command line or pipe the data through standard in, and set the -S option
+-m: Several input files: Just give the name of the files on the command line together with the -m option
+-M: A single file, the data for the different curves are in different columns: give the name of the file on the command line or pipe the data through standard in, and set the -M option
+-S: A single file, the data for the different curves are in the same column, but the curves are separated by blank lines: give the name of the file on the command line or pipe the data through standard in, and set the -S option
 
 
 Examples:
