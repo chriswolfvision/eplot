@@ -6,6 +6,10 @@ The easiest way is to pipe the data through the program. Let's assume that you h
 
 cat data.txt | eplot
 
+Which will give a result looking like this: 
+
+![alt text](doc/img.png)
+
 There are several ways to create multiple plots on a single diagramm:
 
     -m: Several input files: Just give the name of the files on the command line together with the -m option
