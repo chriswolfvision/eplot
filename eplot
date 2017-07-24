@@ -1,0 +1,679 @@
+#!/usr/bin/ruby
+# **************************************************************************
+# eplot 
+# Written by Christian Wolf
+#
+# eplot ("easy gnuplot") is a shell script which allows to pipe data easily 
+# through gnuplot and create plots quickly, which can be saved in postscript, 
+# PDF, PNG or EMF files. Plotting of multiple files into a single diagram is 
+# supported.
+# **************************************************************************
+# This program is free software; you can redistribute it and/or modify  
+# it under the terms of the GNU General Public License as published by  
+# the Free Software Foundation; either version 2 of the License, or     
+# (at your option) any later version.                                   
+#                                                                         
+# This program is distributed in the hope that it will be useful,       
+# but WITHOUT ANY WARRANTY; without even the implied warranty of        
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         
+# GNU General Public License for more details.                          
+#                                                                         
+# You should have received a copy of the GNU General Public License     
+# along with this program; if not, write to the                         
+# Free Software Foundation, Inc.,                                       
+# 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.   
+# **************************************************************************
+# Changelog:
+# 2.07 03.05.2007: -bugfix case where input file is empty
+# 2.06 09.12.2005: -bugfix style not set when single plot from stdin
+# 2.05 19.11.2005: -no dummy titles are displayed (tmp files etc.); bugfixes
+# 2.04 13.11.2005: -Added -o option: specify the name of the output file
+# 2.03 25.10.2005: -Bugfix: added some exception handling (File stuff)
+# 2.02 25.10.2005: -Added -D option (dump created files)
+#                  -Bugfix files containing dashes
+# 2.01 22.10.2005: -Enabled color for postscript & PDF output
+#                  -Changed option -w to option -l
+#                  -Added -w option to change line width
+#                  -Added -I option to change the order of style indices
+#                  -Added -B option to create vertical bars
+# 2.00 13.10.2005: -Port to the ruby programming language
+# 1.07 27.09.2005: -Bugfix removed meaningless error message in some cases
+# 1.06 03.07.2005: -Added -S: plotting multiple curves from a single column,
+#                   the curves being separated by blank lines.
+#                  -Fixed bug in the syntax validation code.
+# 1.05 01.07.2005: -Fixed compatibility issue with older versions of gnuplot.
+#                  -Fixed bug when options "-p -M" are provided
+#                  -Added some argument checking
+# 1.04 30.06.2005: -Bugfix option -M when data is piped
+#                  -Improved -t option to make multiple titles possible
+# 1.0  ??.??.2002: -Start of project, initial version written in 
+#                   UNIX korn shell
+# **************************************************************************
+
+require 'tempfile'
+
+# **************************************************************************
+# CONFIGURATION
+
+$Version="2.07 03.05.2007"
+$TextViewer="cat"
+$GnuPlot4OrNewer=true
+
+# **************************************************************************
+# VARIOUS CONSTANTS
+
+$err="eplot: *** ERROR *** "
+$barStyleIndex="20"
+
+$help=<<MARKER_MESSAGE
+Input data definition options:
+ -m --mulfrmul   Multiple curves in a single diagram from different 
+                 files. Each file contains a single column
+ -M --mulfrsin   Multiple curves in a single diagram from a single file	
+                 curves are in different columns
+ -S --mulfrseq   Multiple curves in a single diagram from a single file
+                 curves are in the same column sep. by a blank line
+                 (the curve data must be separated by blank lines)
+                 
+Output file format options: 
+ -P --png        Output to the PNG file foo.png 
+ -p --postscript Output to the postscript file foo.ps 
+ -a --pdf        Output to the pdf file foo.pdf
+ -e --emf        Output to the emf file foo.emf
+ -o <fname>      Specify the output filename
+ 
+Output formatting options:
+ -r <ranges>     set the range of x and y axis values
+                 (e.g. -r [5:10][0:100]).
+ -R <asp-ratio>  set the aspect ratio (1 for a square shaped diagram)
+ -s <size>       set the size factor
+ -l <type>       set the type of curve (lines,points,linespoints,...)
+ -w <width>      set the line width (default: 1)
+ -x <x-axis-opt> provide x-axis options
+ -y <y-axis-opt> provide y-axis options
+ -t <titles>     set the title(s) of the curve(s) (separated by @)
+ -I <indices>    set the order of the line styles (separated by ,)
+                 (e.g. -I "2,1,3,4,5")
+                 
+Miscellaneous opions:                 
+ -B <pos>,<height> creates vertical bars (separated by @)
+                 e.g. -B 100,0.8@200,0.8
+ -D --dump       dump all used files as "eplot-dump-<nr>.dat"
+ -h --help       print this help message
+ -v --version    print version information
+MARKER_MESSAGE
+
+$licence=<<MARKER_MESSAGE
+Written by Christian Wolf
+License: GPL; this is free software. There is absolutely NO warranty!!
+MARKER_MESSAGE
+
+# ******************************************************************************
+# Argument processing:
+# The Option-Container class
+# ******************************************************************************
+
+class OptionController
+
+	# --------------------------------------------------------------------------
+	# ---- constructor
+	def initialize(xargv)		
+		@o={}
+		@o["Files"]=[]
+		@o["LineType"]="lines"
+		@o["LineWidth"]="1"
+		@o["DoPDF"]=false
+		@o["MulFrMul"]=false
+		@o["MulFrSin"]=false
+		@o["MulFrSeq"]=false
+		@o["DumpFiles"]=false
+		@o["TitleString"]=""
+		@o["Bars"]=""
+		@o["StyleIndices"]="1,2,3,4,5,6,7,8,9,10,11,12"
+		@o["Size"]=""
+		@o["Ratio"]=""
+		@o["Range"]=""
+		@o["OutputFileDefault"]=""
+		@o["OutputFileSpecified"]=""				
+		
+		i=0
+		com=""
+		while i<xargv.length
+			opt=xargv[i]
+
+			case opt			
+			
+				when /^-h$|^--help$/
+					usage					
+			
+				when /^-v$|^--version$/ 
+					$stderr.puts "eplot version "+$Version
+					$stderr.puts $licence
+					exit 0
+			
+				# ---- Do we create PNG output?
+				when /^-P$|^--png$/
+					com=com+"set terminal png;\n"
+					@o["OutputFileDefault"]="foo.png"
+			
+				# ---- Do we create Postscript output?
+				when /^-p$|^--postscript$/
+					com=com+"set terminal postscript color;\n"
+					@o["OutputFileDefault"]="foo.ps"
+			
+				# ---- Do we create EMF output?
+				when /^-e$|^--emf$/
+					com=com+"set terminal emf \"helvetica\";\n"
+					@o["OutputFileDefault"]="foo.emf"
+			
+				# ---- Do we create PDF output? First we create postscript
+				# ---- A conversion is done afterwards
+				when /^-a$|^--acrobat$|--pdf$/
+					com=com+"set terminal postscript color;\n"
+					@o["DoPDF"]=true
+					
+				# ---- Specify a custom output file
+				when /^-o$|^--output$/
+					@o["OutputFileSpecified"]=checkOptArg(xargv,i)
+					i=i+1
+					
+				# ---- Multiple curves in a single diagram from different files
+				when /^-m$|^--mulfrmul$/
+					@o["MulFrMul"]=true
+				
+				# ---- Multiple curves in a single diagram from a single file
+				when /^-M$|^--mulfrsin$/
+					@o["MulFrSin"]=true
+				 
+ 				# ---- Multiple curves in a single diagram from a single column
+				when /^-S$|^--mulfrsinseq$/
+					@o["MulFrSeq"]=true
+					
+				# ---- the range
+				when /^-r$|^--range$/					
+					@o["Range"]=checkOptArg(xargv,i)+" "
+					i=i+1
+					
+				# ---- the size
+				when /^-s$|^--size$/					
+					@o["Size"]=checkOptArg(xargv,i)
+					i=i+1
+					
+				# ---- the aspect ratio
+				when /^-R$|^--aspectratio$/					
+					@o["Ratio"]=checkOptArg(xargv,i)
+					i=i+1
+					
+				# ---- the line type
+				when /^-l$|^--linetype$/					
+					@o["LineType"]=checkOptArg(xargv,i)
+					i=i+1					
+					
+				# ---- the line width
+				when /^-w$|^--linewidth$/					
+					@o["LineWidth"]=checkOptArg(xargv,i)
+					i=i+1					
+					
+				# ---- the title string
+				when /^-t$|^--title$/					
+					@o["TitleString"]=checkOptArg(xargv,i)
+					i=i+1
+					
+				# ---- the style indices
+				when /^-I$|^--styleindices$/					
+					@o["StyleIndices"]=checkOptArg(xargv,i)
+					i=i+1
+					
+				# ---- the x-axis label
+				when /^-x$|^--xlabel$/					
+					com=com+"set xlabel \""+checkOptArg(xargv,i)+"\";\n"
+					i=i+1
+					
+				# ---- the y-axis label
+				when /^-y$|^--ylabel$/					
+					com=com+"set ylabel \""+checkOptArg(xargv,i)+"\";\n"
+					i=i+1
+				
+				# ---- the vertical bars
+				when /^-B$|^--bars$/					
+					@o["Bars"]=checkOptArg(xargv,i)
+					i=i+1
+					
+				# ---- dump files
+				when /^-D$|^--dump$/					
+					@o["DumpFiles"]=true
+					
+				# ---- an unknown option
+				when /^-/
+					$stderr.printf "%sunknown option '%s'\n",$err,opt					
+					exit 1
+			
+				# ---- The argument is not an option but a file
+				else				
+					@o["Files"].push(opt)
+			end
+			i=i+1
+		end
+				
+		# ---- Configure the output filename. In the case of PDF
+		# ---- we keep the default filename, since GNUplot does not do
+		# ---- PDF, we translate afterwards
+		if @o["DoPDF"]
+			com=com+"set output \"foo.ps\";\n"
+		else
+			if @o["OutputFileSpecified"]!=""
+				com=com+"set output \""+@o["OutputFileSpecified"]+"\";\n"
+			else
+				if @o["OutputFileDefault"]!=""
+					com=com+"set output \""+@o["OutputFileDefault"]+"\";\n"
+				end
+			end
+		end
+		
+		# ---- The size and ratio options are set in the same command,
+		# ---- so do it here.
+		if @o["Size"]!="" or @o["Ratio"]!=""
+			com=com+"set size "
+			com=com+"ratio "+@o["Ratio"]+" " if @o["Ratio"]!=""
+			com=com+@o["Size"]+","+@o["Size"]+" " if @o["Size"]!=""
+			com=com+";\n"
+		end
+		@o["MiscOptions"]=com
+	end
+	
+	# --------------------------------------------------------------------------
+	# ---- check for a valid option argument
+	def checkOptArg(argv,i)
+		if argv.length<i+2
+			$stderr.printf "%soption '%s' needs an argument!\n",$err,argv[i]
+			exit 1
+		end
+		if argv[i+1][0,1]=="-"
+			$stderr.printf "%sinvalid argument '%s' to option '%s'!\n",$err,
+				argv[i+1],argv[i]
+			exit 1
+		end
+		return argv[i+1]
+	end
+		
+	# --------------------------------------------------------------------------	
+	# ---- writes the usage message
+	def usage
+		$stderr.printf "usage: %s [ options ]\n",$0
+		$stderr.printf "\n%s\n",$help
+		exit 0
+	end
+
+	# --------------------------------------------------------------------------
+	# ---- return a specific option
+	def [](oname)
+		x=@o[oname]
+		if x == nil
+			$stderr.printf "%sinternal error: option %s not found.\n",$err,oname
+			exit 1
+		else
+			return x
+		end
+	end
+			
+	# --------------------------------------------------------------------------
+	# ---- change a specific option
+	def []=(oname,newval)
+		x=@o[oname]
+		if x == nil
+			$stderr.printf "%sinternal error: option %s not found.\n",$err,oname
+			exit 1
+		else
+			@o[oname]=newval
+		end
+	end
+end
+
+# ******************************************************************************
+# The main controller class
+# ******************************************************************************
+
+class Controller
+
+	# --------------------------------------------------------------------------
+	# ---- constructor
+	def initialize
+		@oc = OptionController.new(ARGV)			
+		@StyleLtarr=%w{1 3 7 4 5 2 6 8}
+		@StylePtarr=%w{1 1 1 4 4 2 4 4}
+		if $GnuPlot4OrNewer
+			@StylePrefix="set style line "
+		else
+			@StylePrefix="set linestyle "
+		end
+	end	
+	
+	# --------------------------------------------------------------------------
+	# ---- Get the string containing _ALL_ style definitions for gnuplot
+	def getStyleString
+		style=""	
+		(1..@StyleLtarr.length).each do |i|
+			style=style+@StylePrefix+(i).to_s+" lt "+@StyleLtarr[i-1]+" lw "+@oc["LineWidth"]
+			style=style+" pt "+@StylePtarr[i-1]+" ps 0.5;\n"
+		end
+		style=style+"set style line 20 lt 7 lw 1 pt 4 ps 0.5;\n"
+		return style
+	end
+	
+	# --------------------------------------------------------------------------
+	# ---- Starts a command and checks for success
+	def printAndRun(com)
+		$stderr.puts com
+		if not system(com)
+			$stderr.printf "Error while running command: '"+com+"'\n"
+			$stderr.printf "Error code: %d\n",$?
+			exit 1
+		end
+	end	
+
+	# --------------------------------------------------------------------------
+	# ---- Starts GNUPlot and checks for success
+	def plot(comString,doMultiPlot)
+		# ---- print the options
+		com="echo '\n"+getStyleString+@oc["MiscOptions"]
+		com=com+"set multiplot;\n" if doMultiPlot
+		com=com+"plot "+@oc["Range"]+comString+"\n'| gnuplot -persist"
+		printAndRun(com)		
+		# ---- convert to PDF
+		if @oc["DoPDF"]
+			com="ps2epsi foo.ps"
+			printAndRun(com)
+			com="epstopdf foo.epsi"
+			printAndRun(com)
+			if @oc["OutputFileSpecified"]!=""				
+				com="mv foo.pdf "+@oc["OutputFileSpecified"]
+				printAndRun(com)
+			end
+			com="rm -f foo.ps foo.epsi"
+			printAndRun(com)
+		end
+	end
+	
+	# --------------------------------------------------------------------------
+	# ---- extract a column with a given index 
+	# ---- from a file and write it as single column
+	# ---- into another file
+	def extractColumn(fromFilename,index,toFile)
+		begin
+			file = File.open(fromFilename) 
+		rescue
+			$stderr.printf "%scannot open file '%s' for reading!\n",$err,fromFilename
+			exit 1
+		end		
+		file.each_line { |line| toFile.puts line.split(" ")[index-1] }
+		toFile.flush
+		file.close
+	end
+	
+	# --------------------------------------------------------------------------
+	# ---- run a single plot from a single file
+	def runSinFrSin(filename)
+		styleArr=@oc["StyleIndices"].split(",")
+		com="\""+filename+"\" "
+		com=com+"title \""+@oc["TitleString"]+"\" " if @oc["TitleString"]!=""
+		com=com+"with "+@oc["LineType"]+" ls "+styleArr[0]
+		plot(com,false)
+	end	
+	
+	# --------------------------------------------------------------------------
+	# ---- dump the files
+	def dumpFiles(openedFiles)				
+		i=0
+		openedFiles.each do |f|
+			begin
+				of=File.open("eplot-dump-"+i.to_s+".dat","w")
+			rescue					
+				$stderr.printf "%scannot open file %s",$err,"eplot-dump-"+i.to_s+".dat"
+				exit 1
+			end
+			f.seek(0,IO::SEEK_SET)
+			f.each_line { |l| of.puts(l) }
+			f.seek(0,IO::SEEK_SET)
+			of.close
+			i=i+1
+		end
+	end
+	
+	# --------------------------------------------------------------------------
+	# ---- Create a titleString which contains the string "empty-notitle"
+	# ---- for each file to plot
+	def removeDummyTitles(titleCount)
+		if @oc["TitleString"]==""
+			c=""
+			(1..titleCount).each do |i|
+				c=c+"@" if i>1
+				c=c+"empty-notitle"
+			end
+			@oc["TitleString"]=c
+		end
+	end
+	
+	# --------------------------------------------------------------------------
+	# ---- run multiple plots from multiple files
+	# ---- argument: list of already opened files
+	def runMulFrMulOpenedFiles(openedFiles)				
+		titleArr=nil
+		titleArr=@oc["TitleString"].split("@") if @oc["TitleString"]!=""
+		styleArr=@oc["StyleIndices"].split(",")
+		
+		# ---- eventually create vertical bars, which are 
+		# ---- nothing else than custom made data files
+		if @oc["Bars"] != ""
+		
+			# ---- If no titles are requested, then we create 
+			# ---- a dummy title array
+			if titleArr==nil
+				titleArr=[]
+				(1..openedFiles.length).each { |i| titleArr.push("default-title") }
+			end
+		
+			barArr=@oc["Bars"].split("@")
+			barArr.each do |b|
+				# ---- Parse the bar coordinates
+				bd=b.split(",")
+				if bd.length!=2
+					$stderr.printf "%ssyntax error in option -B or --bar!\n",$err
+					exit 1
+				end
+				
+				# ---- Create the file and add it to the list of files
+				tmpf=Tempfile.new("eplot")
+				tmpf.printf "%s %s",bd[0],bd[1]
+				tmpf.flush
+				openedFiles.push(tmpf)
+				
+				# ---- Create the entries in the title array
+				len=openedFiles.length
+				if titleArr
+					if titleArr.length<len
+						titleArr.push("bar-notitle") 
+					else
+						titleArr[len-1]="bar-notitle"
+					end
+				end
+			end
+		end
+				
+		# ---- dump the files if requested
+		dumpFiles(openedFiles) if @oc["DumpFiles"]
+				
+		# ---- process all files
+		i=1		
+		com=""
+		openedFiles.each do |f|
+			com=com+", " if i>1
+			com=com+"\""+f.path+"\" "
+			
+			# ---- do we have a title?
+			if titleArr
+				if i>titleArr.length
+					$stderr.printf "%syou need to specify a title for each curve!\n",$err
+					exit 1
+				end
+				case titleArr[i-1]
+					when "bar-notitle"
+						com=com+"notitle "
+						
+					when "empty-notitle"
+						com=com+"notitle "
+						
+					when "default-title"
+						;
+					else
+						com=com+"title \""+titleArr[i-1]+"\" " 
+				end
+			end			
+			
+			if titleArr!=nil and titleArr[i-1]=="bar-notitle"
+				com=com+"with impulses ls "+$barStyleIndex
+			else
+				com=com+"with "+@oc["LineType"]+" ls "+styleArr[i-1]
+			end
+			i=i+1
+		end	
+		plot(com,true)
+	end
+	
+	# --------------------------------------------------------------------------
+	# ---- run multiple plots from multiple files
+	# ---- argument: list of filenames
+	def runMulFrMul(filenames)		
+		openedFiles=[]
+		filenames.each do |fn|
+			if not FileTest.exist?(fn)
+				$stderr.printf "%scannot open file '%s' for reading.\n",$err,fn
+				exit 1
+			end
+			t=File.open(fn)
+			openedFiles.push(t)
+		end			
+		runMulFrMulOpenedFiles(openedFiles)
+		openedFiles.each { |f| f.close }
+	end
+	
+	# --------------------------------------------------------------------------
+	# ---- run multiple plots from a single file
+	def runMulFrSin(filename)
+		nocols=0
+		# ---- Let's see how many columns we have in the file
+		File.open(filename) { |x| nocols=x.gets.split(" ").length }
+		$stderr.printf "Found %d columns\n",nocols
+	
+		# ---- Traverse the columns and put them into seperate files
+		files=[]
+		for i in (1..nocols)
+			tmpf=Tempfile.new("eplot")
+			files.push(tmpf)
+			extractColumn(filename,i,tmpf)						
+		end	
+				
+		# ---- Call it as if we had multiple files
+		removeDummyTitles(files.length)
+		runMulFrMulOpenedFiles(files) 
+		files.each { |f| f.close }
+	end
+	
+	# --------------------------------------------------------------------------
+	# ---- run multiple plots from a single file
+	# ---- one single column, curves are separated by blank lines
+	def runMulFrSeq(filename)			
+		files=[]
+		begin
+			file = File.open(filename)
+		rescue
+			$stderr.printf "%scannot open file '%s' for reading!\n",$err,filename
+			exit 1
+		end
+		
+		startNewFile=true		
+		oldFile=tmpf=nil	
+		while line=file.gets
+		
+			# ---- only whitespace in the line?
+			if line.split(" ").length<1
+				startNewFile=true 
+			else						
+				if startNewFile
+					oldFile.flush if oldFile							
+					tmpf=oldFile=Tempfile.new("eplot")
+					files.push(tmpf)
+					startNewFile=false
+				end					
+				tmpf.puts line					
+			end							
+		end
+		if tmpf
+			tmpf.flush
+		else
+			$stderr.printf "%sFile '%s' is empty!\n",$err,filename
+			exit 1
+		end
+		file.close
+	
+		# ---- Call it as if we had multiple files
+		removeDummyTitles(files.length)
+		runMulFrMulOpenedFiles(files) 
+		files.each { |f| f.close }
+	end
+		
+	# --------------------------------------------------------------------------
+	# ---- run from a single file. 
+	# ---- either a single or multiple diagrams
+	def runFrOneOrMoreFiles(filenames)	
+		# ---- Multiple curves in a single diagram from a single file
+		# ---- or repeated across multiple files
+		if @oc["MulFrSin"]				
+			filenames.each { |fn| runMulFrSin(fn) } 
+			
+		else 			
+			# ---- Multiple curves in a single diagram from different files	
+			if @oc["MulFrMul"]					
+				runMulFrMul(filenames)
+			
+			else
+				if @oc["MulFrSeq"]
+					filenames.each { |fn| runMulFrSeq(fn) } 
+			
+				# ---- Default: a separate curve for each file
+				else
+					filenames.each { |fn| runSinFrSin(fn) }
+				end
+			end
+		end
+	end
+
+	# --------------------------------------------------------------------------
+	# ---- run on input = standard input
+	def runFrStdin
+		tmpf=Tempfile.new("eplot")
+		$stdin.each_line { |x| tmpf.print x }
+		tmpf.flush		
+		
+		runFrOneOrMoreFiles([tmpf.path])
+		tmpf.close
+	end	
+	
+	# --------------------------------------------------------------------------
+	# ---- run the application
+	def run	
+		# ---- run from stdin
+		if  @oc["Files"].length < 1
+			runFrStdin											
+		# ---- run from a given file list
+		else 				
+			runFrOneOrMoreFiles(@oc["Files"])
+		end
+	end
+end
+
+# --------------------------------------------------------------------------
+# The main program
+# --------------------------------------------------------------------------
+
+$c=Controller.new
+$c.run
