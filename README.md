@@ -25,9 +25,9 @@ eplot file1 file2 file3
 
 There are several ways to create multiple plots on a single diagramm:
 
-  -m: Several input files: Just give the name of the files on the command line together with the -m option
-  -M: A single file, the data for the different curves are in different columns: give the name of the file on the command line or pipe the data through standard in, and set the -M option
-  -S: A single file, the data for the different curves are in the same column, but the curves are separated by blank lines: give the name of the file on the command line or pipe the data through standard in, and set the -S option
+    -m: Several input files: Just give the name of the files on the command line together with the -m option
+    -M: A single file, the data for the different curves are in different columns: give the name of the file on the command line or pipe the data through standard in, and set the -M option
+    -S: A single file, the data for the different curves are in the same column, but the curves are separated by blank lines: give the name of the file on the command line or pipe the data through standard in, and set the -S option
 
 
 Examples:
@@ -46,15 +46,15 @@ Which will give a result looking like this:
 
 A couple of options allow to change various settings:
 
-  -r intervals    (e.g. -r [5:10][0:100]) Change the range of the x and the y axis
-  -R aspect-ratio     (e.g. -R 0.8)   Change the aspect ratio of the plot
-  -s size-factor  (e.g. -s 1.5)   Change the size (resolution) of the plot
-  -l curve-type   (e.g. -l points)    Change the type of curve
-  -w line-width   (e.g. -w 2) Change the line width (default: 1)
-  -t title    (e.g. -t 'Error Rate@Recall@Precision') Change the title(s) of the curve(s) (separated by @)
-  -x x-options    (e.g. -x 'sigma')   Change options of the x-axis, e.g. the label but also other options.
-  -y y-options    (e.g. -y 'error rate')) Change options of the y-axis, e.g. the label but also other options.
-  -B pos,height   (e.g. -B 100,0.1)   Add a vertical bar at position pos with height height. Several bars may be added, separated by @
+    -r intervals    (e.g. -r [5:10][0:100]) Change the range of the x and the y axis
+    -R aspect-ratio     (e.g. -R 0.8)   Change the aspect ratio of the plot
+    -s size-factor  (e.g. -s 1.5)   Change the size (resolution) of the plot
+    -l curve-type   (e.g. -l points)    Change the type of curve
+    -w line-width   (e.g. -w 2) Change the line width (default: 1)
+    -t title    (e.g. -t 'Error Rate@Recall@Precision') Change the title(s) of the curve(s) (separated by @)
+    -x x-options    (e.g. -x 'sigma')   Change options of the x-axis, e.g. the label but also other options.
+    -y y-options    (e.g. -y 'error rate')) Change options of the y-axis, e.g. the label but also other options.
+    -B pos,height   (e.g. -B 100,0.1)   Add a vertical bar at position pos with height height. Several bars may be added, separated by @
 
 For example, creating a plot of three curves (three types of classification accuracy measures in this case) which are stored as three different columns in the file data.txt, with a custmozed x-axis label and customized plot titles as well as a manual setting of the x and y range, can be done with this command:
 
@@ -83,4 +83,4 @@ ec is also usefull if the columns in the original file are not separated by whit
 
 ```
 cat data.txt | ec -; 5 3 | eplot -M
-```
+``
