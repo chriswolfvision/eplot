@@ -19,7 +19,7 @@ If the input data is available in a file (as opposed to being the output of anot
 ```
 eplot file1
 eplot file1 file2 file3
-``
+```
 
 ## Multiple plots in a single diagram
 
