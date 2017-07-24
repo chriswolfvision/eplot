@@ -83,4 +83,37 @@ ec is also usefull if the columns in the original file are not separated by whit
 
 ```
 cat data.txt | ec -; 5 3 | eplot -M
-``
+```
+
+## Installation 
+
+No setup is necessary. Just download the script files (eplot and ec) and put them into a directory which is in the PATH of your shell. Just be sure that the ruby shell is available as /usr/bin/ruby, else create a link or change the first line of each script. 
+
+The standard configuration of the script only works with gnuplot 4.0 or newer, the reason being a couple of changes in the gnuplot syntax. However, the script may be adapted to older versions by a unique and simple change: set the variable "$GnuPlot4OrNewer" at the beginning of the script (in the configuration section) to "false": 
+
+```
+$GnuPlot4OrNewer=false
+```
+
+##### Gnuplot
+
+eplot is based on Gnuplot and needs Gnuplot 4.0 or newer. Older versions are supported but a variable must be changed in the eplot script (see the download section)
+
+##### Ruby
+
+eplot and ec are completely written in the ruby programming language, so you need to have the ruby runtime package installed. Ruby comes with most Linux distributions. 
+
+## Credits
+
+eplot was written by [Christian Wolf](http://liris.cnrs.fr/christian.wolf).
+The dumb terminal patch was provided by Peter Barnes.
+
+## Licence
+
+This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with this program; if not, write to the Free Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. 
+
+
