@@ -8,7 +8,7 @@ cat data.txt | eplot
 
 Which will give a result looking like this: 
 
-![alt text](doc/img.png)
+![alt text](doc/eplot_single.gif)
 
 There are several ways to create multiple plots on a single diagramm:
 
