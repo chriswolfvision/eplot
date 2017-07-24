@@ -19,15 +19,15 @@ If the input data is available in a file (as opposed to being the output of anot
 ```
 eplot file1
 eplot file1 file2 file3
-```
+``
 
 ## Multiple plots in a single diagram
 
 There are several ways to create multiple plots on a single diagramm:
 
--m: Several input files: Just give the name of the files on the command line together with the -m option
--M: A single file, the data for the different curves are in different columns: give the name of the file on the command line or pipe the data through standard in, and set the -M option
--S: A single file, the data for the different curves are in the same column, but the curves are separated by blank lines: give the name of the file on the command line or pipe the data through standard in, and set the -S option
+  -m: Several input files: Just give the name of the files on the command line together with the -m option
+  -M: A single file, the data for the different curves are in different columns: give the name of the file on the command line or pipe the data through standard in, and set the -M option
+  -S: A single file, the data for the different curves are in the same column, but the curves are separated by blank lines: give the name of the file on the command line or pipe the data through standard in, and set the -S option
 
 
 Examples:
@@ -37,8 +37,50 @@ eplot -m 'Measured A' 'Measured B' 'Measured C' 'Simulated A' 'Simulated B' 'Sim
 eplot -M singlefile.dat
 ```
 
+Which will give a result looking like this:
+
 ![alt text](doc/eplot_multiple.gif)
 
 
-See the online documentation for more info
-http://liris.cnrs.fr/christian.wolf/software/eplot/index.html
+## Customize the plot
+
+A couple of options allow to change various settings:
+
+  -r intervals    (e.g. -r [5:10][0:100]) Change the range of the x and the y axis
+  -R aspect-ratio     (e.g. -R 0.8)   Change the aspect ratio of the plot
+  -s size-factor  (e.g. -s 1.5)   Change the size (resolution) of the plot
+  -l curve-type   (e.g. -l points)    Change the type of curve
+  -w line-width   (e.g. -w 2) Change the line width (default: 1)
+  -t title    (e.g. -t 'Error Rate@Recall@Precision') Change the title(s) of the curve(s) (separated by @)
+  -x x-options    (e.g. -x 'sigma')   Change options of the x-axis, e.g. the label but also other options.
+  -y y-options    (e.g. -y 'error rate')) Change options of the y-axis, e.g. the label but also other options.
+  -B pos,height   (e.g. -B 100,0.1)   Add a vertical bar at position pos with height height. Several bars may be added, separated by @
+
+For example, creating a plot of three curves (three types of classification accuracy measures in this case) which are stored as three different columns in the file data.txt, with a custmozed x-axis label and customized plot titles as well as a manual setting of the x and y range, can be done with this command:
+
+```
+cat data.txt | eplot -M -x 'number of neighbors' -r [1:20][0:1] -t 'Accuracy@Precision@Recall'
+```
+
+## Saving into external files
+
+Various options allow to save a plot into diffrent formats. The filename cannot be specified, it is fixed to "foo.XXX", XXX being the extention of the respective file format:
+
+    -P Save into a PNG image (foo.png)
+    -p Save into a postscript image (foo.ps)
+    -a Save into a PDF image (foo.pdf)
+    -e Save into a EMF image (foo.emf)
+
+## Selecting rows
+
+In some situations you might want to plot data from a file but ignore part of the file contents. If the file is organized in columns, i.e. you will plot it using the -M option to eplot, then the selection of a subset of the file's columns can be done using the ec tool (say "extract column"). Just add it as a filter between the data and the eplot command. For instance, if you want to plot columns 2 and 3 only:
+
+```
+cat data.txt | ec 2 3 | eplot -M
+```
+
+ec is also usefull if the columns in the original file are not separated by whitespace but by another character. The character separater used by ec can configured by adding it on the command line preceeded by a dash. The output character separater is always whitespace, as requested by eplot. If, for example, you have a file whose columns are seperated by a semicolon and you want to plot columns 5 and 3, use the command:
+
+```
+cat data.txt | ec -; 5 3 | eplot -M
+```
