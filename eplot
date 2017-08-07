@@ -81,6 +81,7 @@ Output file format options:
  -p --postscript Output to the postscript file foo.ps 
  -a --pdf        Output to the pdf file foo.pdf
  -e --emf        Output to the emf file foo.emf
+ -c --canvas     Output to the HTML5 canvas enhanced mousing file foo.html
  -o <fname>      Specify the output filename
  -d --dumb       Output to dumb terminal (ascii art)
  
@@ -103,6 +104,7 @@ Miscellaneous opions:
  -B <pos>,<height> creates vertical bars (separated by @)
                  e.g. -B 100,0.8@200,0.8
  -D --dump       dump all used files as "eplot-dump-<nr>.dat"
+ -O --open       Immediately open output file
  -h --help       print this help message
  -v --version    print version information
 MARKER_MESSAGE
@@ -170,6 +172,11 @@ class OptionController
 					com=com+"set terminal emf \"helvetica\";\n"
 					@o["OutputFileDefault"]="foo.emf"
 			
+				# ---- Do we create HTML output?
+				when /^-c$|^--canvas$/
+					com=com+"set terminal canvas enhanced mousing;\n"
+					@o["OutputFileDefault"]="foo.html"
+
 				# ---- Do we create PDF output? First we create postscript
 				# ---- A conversion is done afterwards
 				when /^-a$|^--acrobat$|--pdf$/
@@ -180,6 +187,10 @@ class OptionController
 				when /^-o$|^--output$/
 					@o["OutputFileSpecified"]=checkOptArg(xargv,i)
 					i=i+1
+
+				# ---- Open output file
+				when /^-O$|^--open$/
+					@o["OpenFile"]=true
 
 			        # ---- Do we print to dumb terminal?
 			        when /^-d$|^--dumb$/
@@ -406,6 +417,12 @@ class Controller
 				printAndRun(com)
 			end
 			com="rm -f foo.ps foo.epsi"
+			printAndRun(com)
+		end
+
+		if @oc["OpenFile"]
+			file = @oc["OutputFileSpecified"]!="" ? @oc["OutputFileSpecified"] : @oc["OutputFileDefault"]
+			com="open #{file}"
 			printAndRun(com)
 		end
 	end
