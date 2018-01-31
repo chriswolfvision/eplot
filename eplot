@@ -99,6 +99,7 @@ Output formatting options:
     --ylog       log y-axis
  -t <titles>     set the title(s) of the curve(s) (separated by @)
  -I <indices>    set the order of the line styles (separated by ,)
+ --notitle       suppress the default title
                  (e.g. -I "2,1,3,4,5")
 
 Miscellaneous opions:
@@ -132,6 +133,7 @@ class OptionController
 		@o["MulFrMul"]=false
 		@o["MulFrSin"]=false
 		@o["MulFrSeq"]=false
+		@o["NoTitle"]=false
 		@o["DumpFiles"]=false
 		@o["TitleString"]=""
 		@o["Bars"]=""
@@ -190,6 +192,11 @@ class OptionController
 				# ---- Do we print to dumb terminal?
 				when /^-d$|^--dumb$/
 					com=com+"set terminal dumb;\n"
+
+				
+				# ---- Do we suppress the title?
+				when /^--notitle$/
+					@o["NoTitle"]=true
 
 				# ---- Multiple curves in a single diagram from different files
 				when /^-m$|^--mulfrmul$/
@@ -437,7 +444,11 @@ class Controller
 	def runSinFrSin(filename)
 		styleArr=@oc["StyleIndices"].split(",")
 		com="\""+filename+"\" "
-		com=com+"title \""+@oc["TitleString"]+"\" " if @oc["TitleString"]!=""
+		if @oc["TitleString"]!=""
+			com=com+"title \""+@oc["TitleString"]+"\" "
+		elsif @oc["NoTitle"]
+			com=com+"notitle "
+		end
 		com=com+"with "+@oc["LineType"]+" ls "+styleArr[0]
 		plot(com,false)
 	end
