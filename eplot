@@ -3,10 +3,10 @@
 # eplot 
 # Written by Christian Wolf
 #
-# eplot ("easy gnuplot") is a shell script which allows to pipe data easily 
-# through gnuplot and create plots quickly, which can be saved in postscript, 
-# PDF, PNG or EMF files. Plotting of multiple files into a single diagram is 
-# supported.
+# eplot ("easy gnuplot") is a shell script which allows to pipe data easily
+# through gnuplot and create plots quickly, which can be saved in postscript,
+# PDF, PNG, EMF or SVG files. Plotting of multiple files into a single diagram
+# is supported.
 # **************************************************************************
 # This program is free software; you can redistribute it and/or modify  
 # it under the terms of the GNU General Public License as published by  
@@ -81,6 +81,7 @@ Output file format options:
  -p --postscript Output to the postscript file foo.ps 
  -a --pdf        Output to the pdf file foo.pdf
  -e --emf        Output to the emf file foo.emf
+ -g --svg        Output to the svg file foo.svg
  -o <fname>      Specify the output filename
  -d --dumb       Output to dumb terminal (ascii art)
  
@@ -176,6 +177,10 @@ class OptionController
 					com=com+"set terminal postscript color;\n"
 					@o["DoPDF"]=true
 					
+				# ---- Do we create SVG output?
+				when /^-g$|^--svg$/
+					com=com+"set terminal svg;\n"
+
 				# ---- Specify a custom output file
 				when /^-o$|^--output$/
 					@o["OutputFileSpecified"]=checkOptArg(xargv,i)
