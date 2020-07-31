@@ -153,8 +153,8 @@ class OptionController
 					usage
 
 				when /^-v$|^--version$/
-					$stderr.puts "eplot version "+$Version
-					$stderr.puts $licence
+					puts "eplot version "+$Version
+					puts $licence
 					exit 0
 
 				# ---- Do we create PNG output?
@@ -321,8 +321,8 @@ class OptionController
 	# --------------------------------------------------------------------------
 	# ---- writes the usage message
 	def usage
-		$stderr.printf "usage: %s [ options ]\n",$0
-		$stderr.printf "\n%s\n",$help
+		printf "usage: %s [ options ]\n",$0
+		printf "\n%s\n",$help
 		exit 0
 	end
 
