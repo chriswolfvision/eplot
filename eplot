@@ -153,8 +153,8 @@ class OptionController
 					usage
 
 				when /^-v$|^--version$/
-					$stderr.puts "eplot version "+$Version
-					$stderr.puts $licence
+					puts "eplot version "+$Version
+					puts $licence
 					exit 0
 
 				# ---- Do we create PNG output?
@@ -187,9 +187,9 @@ class OptionController
 					@o["OutputFileSpecified"]=checkOptArg(xargv,i)
 					i=i+1
 
-			        # ---- Do we print to dumb terminal?
-			        when /^-d$|^--dumb$/
-			                com=com+"set terminal dumb;\n"
+				# ---- Do we print to dumb terminal?
+				when /^-d$|^--dumb$/
+					com=com+"set terminal dumb;\n"
 
 				# ---- Multiple curves in a single diagram from different files
 				when /^-m$|^--mulfrmul$/
@@ -199,7 +199,7 @@ class OptionController
 				when /^-M$|^--mulfrsin$/
 					@o["MulFrSin"]=true
 
- 				# ---- Multiple curves in a single diagram from a single column
+				# ---- Multiple curves in a single diagram from a single column
 				when /^-S$|^--mulfrsinseq$/
 					@o["MulFrSeq"]=true
 
@@ -243,15 +243,15 @@ class OptionController
 					com=com+"set xlabel \""+checkOptArg(xargv,i)+"\";\n"
 					i=i+1
 
-			        # ---- log x-axis
-			        when /^--xlog$/
-			                com=com+"set logscale x;\n"
+				# ---- log x-axis
+				when /^--xlog$/
+					com=com+"set logscale x;\n"
 
-			        # ---- log y-axis
-			        when /^--ylog$/
-			                com=com+"set logscale y;\n"
+				# ---- log y-axis
+				when /^--ylog$/
+					com=com+"set logscale y;\n"
 
-			        # ---- the y-axis label
+				# ---- the y-axis label
 				when /^-y$|^--ylabel$/
 					com=com+"set ylabel \""+checkOptArg(xargv,i)+"\";\n"
 					i=i+1
@@ -321,8 +321,8 @@ class OptionController
 	# --------------------------------------------------------------------------
 	# ---- writes the usage message
 	def usage
-		$stderr.printf "usage: %s [ options ]\n",$0
-		$stderr.printf "\n%s\n",$help
+		printf "usage: %s [ options ]\n",$0
+		printf "\n%s\n",$help
 		exit 0
 	end
 
@@ -399,7 +399,7 @@ class Controller
 		# ---- print the options
 		com="echo '\n"+getStyleString+@oc["MiscOptions"]
 		com=com+"set multiplot;\n" if doMultiPlot
-	        com=com+"plot "+@oc["Range"]+comString+"\n'| gnuplot -persist"
+		com=com+"plot "+@oc["Range"]+comString+"\n'| gnuplot -persist"
 		printAndRun(com)
 		# ---- convert to PDF
 		if @oc["DoPDF"]
