@@ -24,6 +24,8 @@
 # 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 # **************************************************************************
 # Changelog:
+# 2.11 06.08.2020: -Charles Franklin added --notitle option (@cjfman)
+# 2.10 05.08.2020: -Bugfix: print --help output to stdout instead of stderr
 # 2.09 03.09.2018: -Jon Coppeard added support for SVG (@jonco3 at github)
 # 2.08 24.07.2017: -added dumb terminal support by Peter Barnes
 # 2.07 03.05.2007: -bugfix case where input file is empty
@@ -57,7 +59,7 @@ require 'tempfile'
 # **************************************************************************
 # CONFIGURATION
 
-$Version="2.07 03.05.2007"
+$Version="2.11 06.08.2020"
 $TextViewer="cat"
 $GnuPlot4OrNewer=true
 
@@ -193,7 +195,6 @@ class OptionController
 				when /^-d$|^--dumb$/
 					com=com+"set terminal dumb;\n"
 
-				
 				# ---- Do we suppress the title?
 				when /^--notitle$/
 					@o["NoTitle"]=true
@@ -585,6 +586,7 @@ class Controller
 			t=File.open(fn)
 			openedFiles.push(t)
 		end
+		removeDummyTitles(openedFiles.length) if @oc["NoTitle"]
 		runMulFrMulOpenedFiles(openedFiles)
 		openedFiles.each { |f| f.close }
 	end
