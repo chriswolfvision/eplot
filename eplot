@@ -24,6 +24,8 @@
 # 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 # **************************************************************************
 # Changelog:
+# 2.11 06.08.2020: -Charles Franklin added --notitle option (@cjfman)
+# 2.10 05.08.2020: -Bugfix: print --help output to stdout instead of stderr
 # 2.09 03.09.2018: -Jon Coppeard added support for SVG (@jonco3 at github)
 # 2.08 24.07.2017: -added dumb terminal support by Peter Barnes
 # 2.07 03.05.2007: -bugfix case where input file is empty
@@ -57,7 +59,7 @@ require 'tempfile'
 # **************************************************************************
 # CONFIGURATION
 
-$Version="2.07 03.05.2007"
+$Version="2.11 06.08.2020"
 $TextViewer="cat"
 $GnuPlot4OrNewer=true
 $GnuPlotBin="gnuplot"
@@ -101,6 +103,7 @@ Output formatting options:
  -t <titles>     set the title(s) of the curve(s) (separated by @)
  -I <indices>    set the order of the line styles (separated by ,)
                  (e.g. -I "2,1,3,4,5")
+ --notitle       suppress the default title
 
 Miscellaneous opions:
  -B <pos>,<height> creates vertical bars (separated by @)
@@ -133,6 +136,7 @@ class OptionController
 		@o["MulFrMul"]=false
 		@o["MulFrSin"]=false
 		@o["MulFrSeq"]=false
+		@o["NoTitle"]=false
 		@o["DumpFiles"]=false
 		@o["TitleString"]=""
 		@o["Bars"]=""
@@ -191,6 +195,10 @@ class OptionController
 				# ---- Do we print to dumb terminal?
 				when /^-d$|^--dumb$/
 					com=com+"set terminal dumb;\n"
+
+				# ---- Do we suppress the title?
+				when /^--notitle$/
+					@o["NoTitle"]=true
 
 				# ---- Multiple curves in a single diagram from different files
 				when /^-m$|^--mulfrmul$/
@@ -438,7 +446,11 @@ class Controller
 	def runSinFrSin(filename)
 		styleArr=@oc["StyleIndices"].split(",")
 		com="\""+filename+"\" "
-		com=com+"title \""+@oc["TitleString"]+"\" " if @oc["TitleString"]!=""
+		if @oc["TitleString"]!=""
+			com=com+"title \""+@oc["TitleString"]+"\" "
+		elsif @oc["NoTitle"]
+			com=com+"notitle "
+		end
 		com=com+"with "+@oc["LineType"]+" ls "+styleArr[0]
 		plot(com,false)
 	end
@@ -575,6 +587,7 @@ class Controller
 			t=File.open(fn)
 			openedFiles.push(t)
 		end
+		removeDummyTitles(openedFiles.length) if @oc["NoTitle"]
 		runMulFrMulOpenedFiles(openedFiles)
 		openedFiles.each { |f| f.close }
 	end
